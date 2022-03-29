@@ -52,7 +52,7 @@ joinRoom
 Входные параметры - JSON с полями {room_id, user_id, text, date}     
 Возвращает - массив объектов с информацией о сообщении { id, user_id, text, file, date, room_id, name, user_type, gender }   
 ```
-joinRoom
+private message
 ```
 ### Работа с файлами  
 Принимает файла, заргружает его на сервер и добавляет в базу  
