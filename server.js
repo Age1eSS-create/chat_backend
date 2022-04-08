@@ -1,41 +1,26 @@
 "use strict"
 const fileUpload = require("express-fileupload")
-
-const express = require('express');
-const app = express();
-const http = require('http');
-const server = http.createServer(app);
-const { Server } = require("socket.io");
+const express = require('express')
+const app = express()
+const http = require('http')
+const server = http.createServer(app)
+const { Server } = require("socket.io")
+const cors = require('cors')
+var models = require('./model.js')
 const io = new Server(server, {
     cors: {
 
-        origin: "http://localhost:19006",
+        origin: "*",
         methods: ["GET", "POST"]
     }
-});
-const path = require('path');
-const cors = require('cors');
-var models = require('./model.js');
-const e = require('express');
+})
 
-// app.get('/', (req, res) => {
-//     res.sendFile(path.join(__dirname, "..", "client", "index.html"));
-// });
-
-let interval;
-const user = [{ type: 0, login: 'user', password: 'user', id: 1, friends: [{ type: 1, login: 'user2', id: 2 }] }, { type: 1, login: 'user2', password: '2', id: 2, friends: [{ type: 0, login: 'user', id: 1 }] }, { type: 1, login: '1', password: '1', id: 1, friends: [] }];
-//room_id == 0 => общая комната
-let message = [{ id: 1, user_id: 2, text: "Это сообщение в общую комнату", date: 0, room_id: 0 }, { id: 2, user_id: 1, text: "Это сообщение в личку", date: 0, room_id: 12 }]
-// 0 -  в процессе
-// 1 - готово
-let rooms = [{ id: 12, teacher: 1, student: 2, status: 0 }]
 let thisRoom = {}
 let thisUser
-let thisUserIndex = 0
 
 app.use(fileUpload())
-app.use(express.json()) // for parsing application/json
-app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
+app.use(express.json()) 
+app.use(express.urlencoded({ extended: true })) 
 
 app.use(cors({
     origin: '*'
@@ -43,21 +28,21 @@ app.use(cors({
 
 
 app.post('/auth', (req, res) => {
-    console.log(req.body)
+    console.log("-- Auth -- ",req.body)
     models.users.findOne({ login: req.body.login, password: req.body.password }, (err, doc) => {
         if (err) return res.status(400).send(err)
         if (doc == null) return res.status(400).send("User has not registered")
         else {
             thisUser = doc
             let idFriends = []
-            for (let i = 0 ; i < doc.friends.length ; i++) {
+            for (let i = 0; i < doc.friends.length; i++) {
                 idFriends.push(doc.friends[i].id)
             }
-            let mainUser = { id: doc.id, type: doc.type, login: doc.login, name: doc.name, friends: doc.friends , gender : doc.gender }
+            let mainUser = { id: doc.id, type: doc.type, login: doc.login, name: doc.name, friends: doc.friends, gender: doc.gender }
             let fr = doc.friends
-            models.users.find({id: idFriends} , (err , doc) => {
-                for (let  i = 0 ; i < doc.length ; i++) {
-                    for (let j = 0 ; j < fr.length ; j++) {
+            models.users.find({ id: idFriends }, (err, doc) => {
+                for (let i = 0; i < doc.length; i++) {
+                    for (let j = 0; j < fr.length; j++) {
                         if (doc[i].id === fr[j].id) {
                             fr[j].gender = doc[i].gender
                             fr[j].type = doc[i].type
@@ -66,7 +51,7 @@ app.post('/auth', (req, res) => {
                     }
                 }
                 mainUser.friends = fr
-                console.log("entrace : ", mainUser)
+                console.log("-- Entrace-- ", mainUser)
                 return res.status(200).send(mainUser)
             })
         }
@@ -80,14 +65,14 @@ app.get('/user', (req, res) => {
         else {
             thisUser = doc
             let idFriends = []
-            for (let i = 0 ; i < doc.friends.length ; i++) {
+            for (let i = 0; i < doc.friends.length; i++) {
                 idFriends.push(doc.friends[i].id)
             }
-            let mainUser = { id: doc.id, type: doc.type, login: doc.login, name: doc.name, friends: doc.friends , gender : doc.gender }
+            let mainUser = { id: doc.id, type: doc.type, login: doc.login, name: doc.name, friends: doc.friends, gender: doc.gender }
             let fr = doc.friends
-            models.users.find({id: idFriends} , (err , doc) => {
-                for (let  i = 0 ; i < doc.length ; i++) {
-                    for (let j = 0 ; j < fr.length ; j++) {
+            models.users.find({ id: idFriends }, (err, doc) => {
+                for (let i = 0; i < doc.length; i++) {
+                    for (let j = 0; j < fr.length; j++) {
                         if (doc[i].id === fr[j].id) {
                             fr[j].gender = doc[i].gender
                             fr[j].type = doc[i].type
@@ -96,7 +81,7 @@ app.get('/user', (req, res) => {
                     }
                 }
                 mainUser.friends = fr
-                console.log("entrace : ", mainUser)
+                console.log("-- Info User -- ", mainUser)
                 return res.status(200).send(mainUser)
             })
         }
@@ -104,14 +89,13 @@ app.get('/user', (req, res) => {
 })
 
 app.get('/:id/download', function (req, res, next) {
-    var filePath = "files/"+req.params.id; // Or format the path using the `id` rest param
-    var fileName = "req.query.id"; // The default name the browser will use
-
-    res.download(filePath, fileName);    
-});
+    var filePath = "files/" + req.params.id
+    var fileName = "req.query.id"
+    res.download(filePath, fileName);
+})
 
 app.post("/upload", (req, res) => {
-    console.log(req.files)
+    console.log("-- Upload -- ")
     let maxMsg = 0
     const newpath = __dirname + "/files/";
     const file = req.files.file;
@@ -124,9 +108,12 @@ app.post("/upload", (req, res) => {
                 .sort({ id: -1 })
                 .limit(1)
                 .exec(function (err, doc) {
-                    maxMsg = doc[0].id;
-                    models.messages.create({ id: maxMsg + 1, user_id: thisUser.id, text: null, date: new Date(), room_id: thisRoom.id, file: `/files/${filename}`}, (err, doc) => {
-                        if(err) console.log( "---- ADD FILE ERROR ----" ,err)
+                    if (err) maxMsg = 0
+                    else {
+                        maxMsg = doc[0]?.id ? doc[0].id : 0;
+                    }
+                    models.messages.create({ id: maxMsg + 1, user_id: thisUser.id, text: null, date: new Date(), room_id: thisRoom.id, file: `/files/${filename}` }, (err, doc) => {
+                        if (err) console.log("---- ADD FILE ERROR ----", err)
                         else {
                             console.log("---- ADD FILE SUCCES ----")
                         }
@@ -143,24 +130,23 @@ app.get('/users', (req, res) => {
         else {
             let tmpUsers = []
             for (let i = 0; i < doc.length; i++) {
-                tmpUsers.push({ type: doc[i].type, login: doc[i].login, id: doc[i].id, name: doc[i].name , gender : doc[i].gender })
+                tmpUsers.push({ type: doc[i].type, login: doc[i].login, id: doc[i].id, name: doc[i].name, gender: doc[i].gender })
             }
-            console.log("--- ALL STUDENTS ---  " , tmpUsers)
+            console.log("--- ALL STUDENTS ---  ", tmpUsers)
             res.status(200).send(tmpUsers)
         }
     })
 })
 
 app.post('/friend', (req, res) => {
-    //user id friend id
     if (thisUser.type === 0) {
         models.users.findOne({ id: req.body.id }, (err, doc) => {
             if (err) {
-                console.log("-- {ERROR1} -- Main user - ", req.body.id, " ADD ", req.body.id)
+                console.log("-- {ERROR1} -- Main user - ", thisUser.id,  " ADD ", req.body.id)
                 res.status(400).send(err)
             }
             if (doc == null) {
-                console.log("-- {ERROR2} -- Main user - ", req.body.id, " ADD ", req.body.id)
+                console.log("-- {ERROR2} -- Main user - ",thisUser.id , " ADD ", req.body.id)
                 res.status(400).send("User not found")
             }
             else {
@@ -176,7 +162,7 @@ app.post('/friend', (req, res) => {
                             models.rooms.create({ id: Number(id_room), teacher: thisUser.id, student: req.body.id, status: 0 }, (err, doc) => {
                                 if (err) { res.status(500) }
                                 else {
-                                    console.log("-- {Success} -- Main user - ", req.body.id, " ADD ", req.body.id)
+                                    console.log("-- {Success} -- Main user - ", thisUser.id , " ADD ", req.body.id)
                                     res.status(200).send({ code: 200 })
                                 }
                             })
@@ -209,7 +195,7 @@ io.on('connection', (socket) => {
                     for (let i = 0; i < tmpMessage.length; i++) {
                         for (let j = 0; j < doc.length; j++) {
                             if (tmpMessage[i].user_id == doc[j].id) {
-                                messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type , gender : doc[j].gender })
+                                messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type, gender: doc[j].gender })
 
                             }
                         }
@@ -220,6 +206,7 @@ io.on('connection', (socket) => {
         })
     })
     socket.on('chat message', (msg) => {
+        console.log('-- chat message --')
         let tmpMessage = []
         let maxMsg
         models.messages
@@ -227,7 +214,10 @@ io.on('connection', (socket) => {
             .sort({ id: -1 })
             .limit(1)
             .exec(function (err, doc) {
-                maxMsg = doc[0].id;
+                if (err) maxMsg = 0
+                else {
+                    maxMsg = doc[0]?.id ? doc[0].id : 0;
+                }
                 models.messages.create({ id: maxMsg + 1, user_id: msg.user_id, text: msg.text, date: msg.date, room_id: 0, file: null }, (err, doc) => {
                     models.messages.find({ room_id: 0 }, (err, doc) => {
                         if (err) io.emit(0)
@@ -242,7 +232,7 @@ io.on('connection', (socket) => {
                                 for (let i = 0; i < tmpMessage.length; i++) {
                                     for (let j = 0; j < doc.length; j++) {
                                         if (tmpMessage[i].user_id == doc[j].id) {
-                                            messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file ,date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type , gender : doc[j].gender })
+                                            messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file, date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type, gender: doc[j].gender })
 
                                         }
                                     }
@@ -256,6 +246,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on("joinRoom", (room) => {
+        console.log("-- joinRoom --" , room)
         models.rooms.findOne({ id: room }, (err, doc) => {
             if (err) io.emit(err)
             if (doc) {
@@ -276,7 +267,7 @@ io.on('connection', (socket) => {
                             for (let i = 0; i < tmpMessage.length; i++) {
                                 for (let j = 0; j < doc.length; j++) {
                                     if (tmpMessage[i].user_id == doc[j].id) {
-                                        messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file,date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type , gender : doc[j].gender })
+                                        messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file, date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type, gender: doc[j].gender })
 
                                     }
                                 }
@@ -292,17 +283,18 @@ io.on('connection', (socket) => {
 
     socket.on('private message', (msg) => {
         let tmpMessage = []
-        let myFile
         console.log("----PRIVATE MESSAGE----")
-
         let maxMsg
         models.messages
             .find()
             .sort({ id: -1 })
             .limit(1)
             .exec(function (err, doc) {
-                maxMsg = doc[0].id;
-                if (msg.user_id === 0 ) {
+                if (err) maxMsg = 0
+                else {
+                    maxMsg = doc[0]?.id ? doc[0].id : 0;
+                }
+                if (msg.user_id === 0) {
                     models.messages.find({ room_id: Number(msg.room_id) }, (err, doc) => {
                         if (err) io.emit(0)
                         else {
@@ -316,7 +308,7 @@ io.on('connection', (socket) => {
                                 for (let i = 0; i < tmpMessage.length; i++) {
                                     for (let j = 0; j < doc.length; j++) {
                                         if (tmpMessage[i].user_id == doc[j].id) {
-                                            messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file ,date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type , gender : doc[j].gender })
+                                            messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file, date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type, gender: doc[j].gender })
 
                                         }
                                     }
@@ -341,8 +333,8 @@ io.on('connection', (socket) => {
                                     for (let i = 0; i < tmpMessage.length; i++) {
                                         for (let j = 0; j < doc.length; j++) {
                                             if (tmpMessage[i].user_id == doc[j].id) {
-                                                messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file ,date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type  , gender : doc[j].gender})
-    
+                                                messages.push({ id: tmpMessage[i].id, user_id: tmpMessage[i].user_id, text: tmpMessage[i].text, file: tmpMessage[i].file, date: tmpMessage[i].date, room_id: tmpMessage[i].room_id, name: doc[j].name, user_type: doc[j].type, gender: doc[j].gender })
+
                                             }
                                         }
                                     }
