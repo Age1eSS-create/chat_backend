@@ -116,6 +116,7 @@ app.post("/upload", (req, res) => {
                         if (err) console.log("---- ADD FILE ERROR ----", err)
                         else {
                             console.log("---- ADD FILE SUCCES ----")
+                            return res.status(200).send({ok:"ok"})
                         }
                     })
                 });
